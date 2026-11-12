@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="theme-color" content="#edeae5">
+  <meta name="description" content="Интерактивное семейное дерево: фотографии, поколения и родственные связи.">
+  <title>История нашей семьи · Drevo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233e6b59'/%3E%3Cpath d='M16 8v8M8 24v-8h16v8' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="unlock.js"></script>
+</head>
+<body>
+  <main id="viewport" tabindex="0" aria-label="Семейное дерево. Для перемещения удерживайте пробел или среднюю кнопку мыши. Для масштаба используйте Ctrl и колесо.">
+    <div id="scene-mount"></div>
+    <canvas id="connections" aria-hidden="true"></canvas>
+  </main>
+
+  <header class="topbar panel">
+    <a class="brand" href="#" id="home-link" aria-label="Показать всё дерево">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v8M5 20v-8h14v8"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="2" y="17" width="6" height="6" rx="1.5"/><rect x="16" y="17" width="6" height="6" rx="1.5"/></svg></span>
+      <span>История семьи<small id="people-count">Семейное дерево</small></span>
+    </a>
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <input id="search" type="search" autocomplete="off" placeholder="Найти человека" aria-label="Найти человека" aria-controls="search-results" aria-expanded="false" aria-autocomplete="list">
+      <kbd class="search-shortcut">Ctrl K</kbd>
+      <div id="search-results" role="listbox" hidden></div>
+    </div>
+    <button class="icon-button" id="help-button" title="Управление и обозначения" aria-label="Управление и обозначения">?</button>
+  </header>
+
+  <section class="relationship-bar panel" aria-label="Подсветка связей">
+    <span class="blue-dot" aria-hidden="true"></span>
+    <label for="highlight-mode">Показать</label>
+    <select id="highlight-mode">
+      <option value="family">Ближайшую семью</option>
+      <option value="ancestors">Всех предков</option>
+      <option value="descendants">Всех потомков</option>
+      <option value="path">Путь к человеку</option>
+    </select>
+    <div id="target-wrap" hidden>
+      <span class="separator"></span>
+      <label class="sr-only" for="path-target">До кого показать путь</label>
+      <select id="path-target"></select>
+    </div>
+    <button id="clear-selection" class="text-button" hidden>Сбросить</button>
+    <button id="fit-highlight" class="text-button" hidden>Вписать ветвь</button>
+  </section>
+
+  <div id="status" class="status-pill" aria-live="polite">Наведите на карточку, чтобы увидеть связи</div>
+
+  <aside id="person-panel" class="person-panel panel" hidden aria-label="Информация о человеке">
+    <button class="icon-button close-button" id="close-person" aria-label="Закрыть карточку">×</button>
+    <div id="person-details"></div>
+  </aside>
+
+  <section class="bottom-controls panel" aria-label="Масштаб и навигация">
+    <button id="zoom-out" class="icon-button" aria-label="Отдалить" title="Отдалить">−</button>
+    <button id="zoom-reset" class="zoom-value" title="Масштаб 100%">100%</button>
+    <button id="zoom-in" class="icon-button" aria-label="Приблизить" title="Приблизить">+</button>
+    <span class="separator"></span>
+    <button id="fit-tree" class="text-button" title="Показать всё дерево · 0"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5"/></svg>Всё дерево</button>
+    <button id="go-root" class="text-button" title="Найти основного человека">К основному человеку</button>
+  </section>
+
+  <p class="gesture-hint"><kbd>Ctrl</kbd> + колесо — масштаб <span>·</span> <kbd>Пробел</kbd> / средняя кнопка — перемещение</p>
+
+  <button id="minimap-button" class="minimap panel" aria-label="Мини-карта дерева. Нажмите, чтобы перейти в другую часть.">
+    <canvas id="minimap" width="360" height="230" aria-hidden="true"></canvas>
+    <span>Обзор дерева</span>
+  </button>
+
+  <dialog id="help-dialog" class="panel help-dialog">
+    <button class="icon-button close-button" id="close-help" aria-label="Закрыть справку">×</button>
+    <span class="eyebrow">КАК СМОТРЕТЬ ДЕРЕВО</span>
+    <h1>У каждого — своя история.<br>У всех — общие связи.</h1>
+    <dl class="shortcuts">
+      <div><dt><kbd>Ctrl</kbd> + колесо</dt><dd>Приблизить к курсору или отдалить</dd></div>
+      <div><dt><kbd>Пробел</kbd> + перетаскивание</dt><dd>Переместиться по дереву</dd></div>
+      <div><dt>Средняя кнопка мыши</dt><dd>Перетаскивать без пробела</dd></div>
+      <div><dt>Колесо / трекпад</dt><dd>Прокрутить дерево</dd></div>
+      <div><dt>Наведение / нажатие</dt><dd>Подсветить связи / закрепить карточку</dd></div>
+      <div><dt><kbd>Ctrl K</kbd> · <kbd>0</kbd> · <kbd>Esc</kbd></dt><dd>Поиск · всё дерево · снять выбор</dd></div>
+      <div><dt>На телефоне</dt><dd>Перемещение пальцем, масштаб двумя пальцами</dd></div>
+    </dl>
+    <div class="legend"><span><i class="line green"></i> Семейная связь</span><span><i class="line brown"></i> Рабочая версия ≈</span><span><i class="line blue"></i> Выбранная цепочка</span></div>
+    <p class="small-note">Знак ≈ отмечает рабочую гипотезу. Фото могут быть подлинными или синтетическими — происхождение указано в панели человека. Серый стиль сам по себе не устанавливает смерть. На первом этапе лица отсутствуют до проверки дерева.</p>
+  </dialog>
+  <div id="toast" role="status" hidden></div>
+  <div id="loading"><span class="loading-mark"></span><p>Собираем семейное дерево…</p></div>
+  <noscript>Для перемещения по дереву и подсветки родственных связей включите JavaScript.</noscript>
+</body>
+</html>
