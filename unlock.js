@@ -56,7 +56,7 @@ const bytesToB64 = bytes => {
 
 async function getEnvelope() {
   if (envelope) return envelope;
-  const response = await fetch('payload.enc?v=03280cfe03be', { cache: 'no-store' });
+  const response = await fetch('payload.enc?v=1672e55a938e', { cache: 'no-store' });
   if (!response.ok) throw Error('Не удалось загрузить защищённые данные');
   envelope = await response.json();
   if (envelope?.v !== 1) throw Error('Неизвестный формат данных');
