@@ -56,7 +56,7 @@ const bytesToB64 = bytes => {
 
 async function getEnvelope() {
   if (envelope) return envelope;
-  const response = await fetch('payload.enc?v=00fdab7752b5', { cache: 'no-store' });
+  const response = await fetch('payload.enc?v=58882cdc1bdf', { cache: 'no-store' });
   if (!response.ok) throw Error('Не удалось загрузить защищённые данные');
   envelope = await response.json();
   if (envelope?.v !== 1) throw Error('Неизвестный формат данных');
@@ -117,7 +117,7 @@ function showForm(message = '') {
     <input id="unlock-password" type="password" autocomplete="current-password" required>
     <button type="submit">Открыть</button>
     <p class="unlock-error" id="unlock-error" role="alert"></p>
-    <p class="unlock-note">Данные зашифрованы в браузере. Пароль не передаётся на сервер и не хранится в репозитории.</p>
+    <p class="unlock-note">Данные зашифрованы в браузере. Пароль не передаётся на сервер и не хранится в репозитории. Ссылку вида <code>?pass=…</code> можно открыть сразу — параметр убирается из адресной строки после запуска.</p>
   `;
   loading.append(form);
   const input = form.querySelector('input');
@@ -131,11 +131,7 @@ function showForm(message = '') {
     button.textContent = 'Проверяем…';
     showError('');
     try {
-      const data = await getEnvelope();
-      const key = await deriveKey(password, data);
-      const payload = await decryptWithKey(key, data);
-      sessionStorage.setItem(STORAGE_KEY, bytesToB64(new Uint8Array(await crypto.subtle.exportKey('raw', key))));
-      await boot(payload);
+      await unlockWith(password);
     } catch {
       button.disabled = false;
       button.textContent = 'Открыть';
@@ -146,7 +142,35 @@ function showForm(message = '') {
   if (message) showError(message);
 }
 
+async function unlockWith(password) {
+  const data = await getEnvelope();
+  const key = await deriveKey(password, data);
+  const payload = await decryptWithKey(key, data);
+  sessionStorage.setItem(STORAGE_KEY, bytesToB64(new Uint8Array(await crypto.subtle.exportKey('raw', key))));
+  await boot(payload);
+}
+
+function takePasswordFromLink() {
+  const url = new URL(location.href);
+  const pass = url.searchParams.get('pass');
+  if (!pass) return '';
+  url.searchParams.delete('pass');
+  const rest = url.searchParams.toString();
+  history.replaceState(null, '', url.pathname + (rest ? `?${rest}` : '') + url.hash);
+  return pass;
+}
+
 async function start() {
+  const fromLink = takePasswordFromLink();
+  if (fromLink) {
+    try {
+      await unlockWith(fromLink);
+      return;
+    } catch {
+      showForm('Пароль из ссылки не подошёл. Введите пароль вручную.');
+      return;
+    }
+  }
   try {
     const data = await getEnvelope();
     const saved = sessionStorage.getItem(STORAGE_KEY);
